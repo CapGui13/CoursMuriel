@@ -128,13 +128,10 @@ header{
 .file-icon.is-pressing{transform:scale(.9);filter:brightness(.8)}
 .file-name{font-weight:600;font-size:15px;font-family:'Exo 2',sans-serif}
 .file-name-blur{
-  filter: blur(4px);
-  user-select: none;
-  transition: filter .25s, color .25s;
-  cursor: pointer;
+  filter:none;
+  user-select:auto;
+  cursor:default;
 }
-.file-name-blur.revealed{ filter: none; }
-.blur-disabled .file-name-blur{ filter: none; cursor: default; }
 
 /* ── BLUR TOGGLE ── */
 .blur-toggle-wrap{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0 4px;font-size:12px;color:rgba(255,255,255,.5)}
@@ -717,6 +714,26 @@ function renderSeanceGrid(seances) {
   }
 }
 
+// ── lien direct vers un cours ─────────────────────────────────────────
+function openDirectCourseIfRequested() {
+  const param = new URLSearchParams(window.location.search).get('cours');
+  if (!param || !seancesData?.seances?.length) return false;
+
+  const sorted = sortedSeances();
+  let target = null;
+
+  if (/^\d+$/.test(param)) {
+    target = sorted[Number(param) - 1] || null;
+  } else {
+    const decoded = decodeURIComponent(param);
+    target = sorted.find(s => s.folder === decoded || seanceDisplayName(s.folder) === decoded) || null;
+  }
+
+  if (!target) return false;
+  loadSeance(target.folder, false);
+  return true;
+}
+
 // ── découverte auto — cache invalidé par SHA de commit ─────────────────
 async function discoverSeances(forceRefresh = false) {
   const grid = document.getElementById('seance-grid');
@@ -743,6 +760,7 @@ async function discoverSeances(forceRefresh = false) {
           if (cached.descMap)   descMap   = cached.descMap;
           setHint('');
           hideSplash();
+          openDirectCourseIfRequested();
           return;
         }
       } catch {}
@@ -832,6 +850,7 @@ async function discoverSeances(forceRefresh = false) {
     renderSeanceGrid(found);
     setHint('');
     hideSplash();
+    openDirectCourseIfRequested();
 
   } catch(e) {
     hideSplash();
@@ -1084,9 +1103,16 @@ function closeLightbox(e) {
 // ── ouverture d'un dossier → vue séance ───────────────────────────────
 let currentFolder = null;
 
-function loadSeance(folderName) {
+function loadSeance(folderName, updateUrl = true) {
   const seance = (seancesData?.seances || []).find(s => s.folder === folderName);
   if (!seance) return;
+  if (updateUrl) {
+    const sorted = sortedSeances();
+    const courseIndex = sorted.findIndex(s => s.folder === folderName);
+    if (courseIndex >= 0) {
+      history.replaceState(null, '', `${location.pathname}?cours=${courseIndex + 1}`);
+    }
+  }
 
   fadeSwap(() => {
     currentFolder = folderName;
@@ -1102,9 +1128,6 @@ function loadSeance(folderName) {
 
     // Injecter la liste des PBNs
     document.getElementById('seance-file-list').innerHTML = buildFileListHtml(folderName);
-    document.getElementById('seance-file-list').classList.remove('blur-disabled');
-    const toggleInput = document.getElementById('blur-toggle-input');
-    if (toggleInput) toggleInput.checked = true;
 
     // Basculer les vues
     document.getElementById('vhome').style.display = 'none';
@@ -1144,6 +1167,7 @@ function navSeance(dir) {
 }
 
 function showHomeFromSeance() {
+  history.replaceState(null, '', location.pathname);
   fadeSwap(() => {
     currentFolder = null;
     document.getElementById('vseance').style.display = 'none';
@@ -1152,15 +1176,7 @@ function showHomeFromSeance() {
   });
 }
 function buildFileListHtml(folderName) {
-  const toggleHtml = `<div class="blur-toggle-wrap" style="justify-content:flex-start;padding:0 4px 10px">
-    <label class="blur-toggle">
-      <input type="checkbox" id="blur-toggle-input" checked onchange="toggleBlur(this.checked)">
-      <div class="blur-track"></div>
-      <div class="blur-thumb"></div>
-    </label>
-    <span>Flou actif</span>
-  </div>`;
-  return '<div class="file-list">' + toggleHtml +
+  return '<div class="file-list">' +
     pbnFiles.map((f, i) => {
       const key = `${folderName}/${f.name}`;
       const baseName = f.name.replace(/\.pbn$/i, '');
@@ -1169,39 +1185,13 @@ function buildFileListHtml(folderName) {
       const playBtn = link
         ? `<a class="btn-play" href="${esc(bridgeTrainingFr(link))}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:10px">▶ Jouer</a>`
         : '';
-      const sepIdx = baseName.indexOf(' - ');
-      let visiblePart, blurredPart;
-      if (sepIdx >= 0) {
-        visiblePart = esc(baseName.slice(0, sepIdx));
-        blurredPart = esc(baseName.slice(sepIdx + 3));
-      } else {
-        visiblePart = esc(baseName);
-        blurredPart = '';
-      }
-      const nameHtml = blurredPart
-        ? `<div class="file-name" style="display:flex;align-items:baseline;min-width:0"><span style="white-space:nowrap">${visiblePart} - </span><span class="file-name-blur" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;padding-left:3px">${blurredPart}</span></div>`
-        : `<div class="file-name">${visiblePart}</div>`;
-      const onclick = blurredPart
-        ? `onclick="revealOrOpen(event, this, ${i})"`
-        : `onclick="openSeanceAt(${i})"`;
-      return `<div class="file-item" ${onclick}>
+      const nameHtml = `<div class="file-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(baseName)}</div>`;
+      return `<div class="file-item" onclick="openSeanceAt(${i})">
          <div class="file-icon" onclick="event.stopPropagation();openSeanceAt(${i})">🔍</div>
          <div style="min-width:0;flex:1;overflow:hidden">${nameHtml}</div>
          ${playBtn}
        </div>`;
     }).join('') + '</div>';
-}
-
-// ── reveal blur ou ouvre le visualiseur ───────────────────────────────
-function revealOrOpen(e, el, idx) {
-  const blurDisabled = document.getElementById('seance-file-list').classList.contains('blur-disabled');
-  if (blurDisabled) { openSeanceAt(idx); return; }
-  const blur = el.querySelector('.file-name-blur');
-  if (blur && !blur.classList.contains('revealed')) {
-    blur.classList.add('revealed');
-  } else {
-    openSeanceAt(idx);
-  }
 }
 
 // Ouvre la séance en commençant à la première donne du fichier fileIdx
