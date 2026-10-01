@@ -486,30 +486,6 @@ header{
 }
 #fade-overlay.fade-in {opacity:1;pointer-events:all}
 
-/* ── TOKEN ── */
-.token-section{padding:10px 18px;background:#1a1a1a;border-top:1px solid rgba(200,151,58,.15);display:flex;align-items:center;gap:8px}
-.token-wrap{flex:1;min-width:0;position:relative;display:flex;align-items:center}
-.token-input{
-  flex:1;min-width:0;width:100%;
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
-  border-radius:8px;padding:8px 36px 8px 12px;color:#fff;font-size:12px;
-  font-family:'Exo 2',sans-serif;outline:none;
-}
-.token-input::placeholder{color:rgba(255,255,255,.3)}
-.token-input:focus{border-color:rgba(200,151,58,.5)}
-.token-eye{
-  position:absolute;right:8px;top:50%;transform:translateY(-50%);
-  background:none;border:none;cursor:pointer;padding:2px;
-  color:rgba(255,255,255,.4);font-size:15px;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-}
-.token-eye:hover{color:rgba(255,255,255,.8)}
-.token-btn{
-  padding:8px 12px;border-radius:8px;border:none;cursor:pointer;
-  background:var(--felt);color:#fff;font-size:12px;font-weight:700;
-  font-family:'Exo 2',sans-serif;white-space:nowrap;flex-shrink:0;
-}
-.token-ok{color:#6aaa78;font-size:16px;flex-shrink:0}
 .btn-play{
   display:flex;align-items:center;gap:5px;
   padding:7px 11px;border-radius:8px;
@@ -559,14 +535,7 @@ header{
     <div class="cfg-hint" id="cfg-hint"></div>
   </div>
 
-  <div id="token-section" class="token-section">
-    <div class="token-wrap">
-      <input class="token-input" id="token-input" type="password" placeholder="Token GitHub (optionnel, augmente la limite API)" autocomplete="off">
-      <button class="token-eye" id="token-eye" type="button" onclick="toggleTokenEye()" title="Afficher/masquer">👁</button>
-    </div>
-    <button class="token-btn" onclick="saveToken()">OK</button>
-    <span class="token-ok" id="token-ok" style="display:none">✓</span>
-  </div>
+  
 
 </div>
 
@@ -680,35 +649,7 @@ const GH_REPO   = 'capgui13/CoursMuriel';
 const CACHE_KEY = 'coursmuriel-seances-v1';
 
 function ghHeaders() {
-  const token = localStorage.getItem('gh-token');
-  const h = {Accept:'application/vnd.github.v3+json'};
-  if (token) h.Authorization = `token ${token}`;
-  return h;
-}
-
-function toggleTokenEye() {
-  const input = document.getElementById('token-input');
-  input.type = input.type === 'password' ? 'text' : 'password';
-}
-
-function saveToken() {
-  const val = document.getElementById('token-input').value.trim();
-  if (val) {
-    localStorage.setItem('gh-token', val);
-    document.getElementById('token-ok').style.display = 'inline';
-    setTimeout(() => document.getElementById('token-ok').style.display = 'none', 2000);
-    discoverSeances(true);
-  }
-}
-
-function initTokenUI() {
-  const token = localStorage.getItem('gh-token');
-  if (token) {
-    const input = document.getElementById('token-input');
-    input.value = token;
-    input.type = 'password';
-    document.getElementById('token-ok').style.display = 'inline';
-  }
+  return {Accept:'application/vnd.github.v3+json'};
 }
 let seancesData = null;
 
@@ -727,6 +668,7 @@ function fadeSwap(doSwap) {
 
 // Numérotation affichée : conserver les noms réels des dossiers pour les liens et les PBN.
 function seanceDisplayName(folder) {
+  if (folder === 'Cours lundi 28-09') return 'Cours lundi 28/09';
   if (folder === 'Séance 2-01 Aix') return folder;
   const m = folder.match(/^Séance (\d+) Aix$/i);
   return m ? `Séance 1-${m[1].padStart(2, '0')} Aix` : folder;
@@ -1796,7 +1738,6 @@ document.addEventListener('keydown', e => {
 
 // ── boot ───────────────────────────────────────────────────────────────
 (function(){
-  initTokenUI();
   discoverSeances();
 })();
 </script>
