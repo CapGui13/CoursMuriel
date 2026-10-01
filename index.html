@@ -677,7 +677,7 @@ function setHint(msg, err) {
 
 // ── config ─────────────────────────────────────────────────────────────
 const GH_REPO   = 'capgui13/CoursMuriel';
-const CACHE_KEY = 'qpjb-seances-v13';
+const CACHE_KEY = 'coursmuriel-seances-v1';
 
 function ghHeaders() {
   const token = localStorage.getItem('gh-token');
@@ -857,7 +857,9 @@ async function discoverSeances(forceRefresh = false) {
 
     const folders = items.filter(f => f.type === 'dir');
     if (!folders.length) {
-      grid.innerHTML = '<div style="color:rgba(255,255,255,.35);font-size:13px;padding:8px 0">Aucun dossier trouvé.</div>';
+      grid.innerHTML = '<div style="color:rgba(255,255,255,.35);font-size:13px;padding:8px 0">Aucune séance disponible pour le moment.</div>';
+      setHint('');
+      hideSplash();
       return;
     }
 
@@ -877,7 +879,9 @@ async function discoverSeances(forceRefresh = false) {
 
     const found = results.filter(Boolean);
     if (!found.length) {
-      grid.innerHTML = '<div style="color:rgba(255,255,255,.35);font-size:13px;padding:8px 0">Aucun fichier PBN trouvé.</div>';
+      grid.innerHTML = '<div style="color:rgba(255,255,255,.35);font-size:13px;padding:8px 0">Aucune séance disponible pour le moment.</div>';
+      setHint('');
+      hideSplash();
       return;
     }
 
@@ -888,6 +892,7 @@ async function discoverSeances(forceRefresh = false) {
     hideSplash();
 
   } catch(e) {
+    hideSplash();
     // Essayer le cache périmé en fallback
     try {
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
