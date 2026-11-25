@@ -665,7 +665,8 @@ function fadeSwap(doSwap) {
 
 // Numérotation affichée : conserver les noms réels des dossiers pour les liens et les PBN.
 function seanceDisplayName(folder) {
-  if (folder === 'Cours lundi 28-09') return 'Cours lundi 28/09';
+  const datedCourse = folder.match(/^(Cours lundi )(\d{2})-(\d{2})$/i);
+  if (datedCourse) return datedCourse[1] + datedCourse[2] + '/' + datedCourse[3];
   if (folder === 'Séance 2-01 Aix') return folder;
   const m = folder.match(/^Séance (\d+) Aix$/i);
   return m ? `Séance 1-${m[1].padStart(2, '0')} Aix` : folder;
@@ -673,6 +674,9 @@ function seanceDisplayName(folder) {
 
 // Ordre commun à la grille et à la navigation : 2-01 après toutes les 1-xx.
 function compareSeances(a, b) {
+  const dateA = a.folder.match(/^Cours lundi (\d{2})-(\d{2})$/i);
+  const dateB = b.folder.match(/^Cours lundi (\d{2})-(\d{2})$/i);
+  if (dateA && dateB) return Number(dateA[2]) - Number(dateB[2]) || Number(dateA[1]) - Number(dateB[1]);
   const special = 'Séance 2-01 Aix';
   if (a.folder === special && b.folder !== special) return 1;
   if (b.folder === special && a.folder !== special) return -1;
